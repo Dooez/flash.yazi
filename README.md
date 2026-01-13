@@ -61,7 +61,18 @@ prepend_keymap = [
 * Press `Esc` to exit at any time.
 
 ## Configuration
+### .config/yazi/init.lua
+Default config:
+```lua
+require('flash'):setup({
+	unmatched_style = { fg = "darkgrey" },
+	match_style = { fg = "black", bg = "blue" },
+	label_style = { fg = "black", bg = "magenta", bold = true }, 
+})
+```
+Style fields support yazi style specification.
 
+### Launch arguments
 Optional arguments can be passed when launching the plugin:
 
 | Option         | Type    | Default | Description                                      |

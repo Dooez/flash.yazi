@@ -316,19 +316,22 @@ local render_match_label = ya.sync(function(state, url, name, file)
 	if file.is_hovered then
 		table.insert(span, ui.Span(name:sub(1, startPos[1] - 1)))
 	else
-		table.insert(span, ui.Span(name:sub(1, startPos[1] - 1)):fg(state.color_unmatched))
+		table.insert(span, ui.Span(name:sub(1, startPos[1] - 1)):style(state.unmatched_style))
 	end
 
 	while i <= #startPos do
-		table.insert(span, ui.Span(name:sub(startPos[i], endPos[i])):fg(state.color_match_fg):bg(state.color_match_bg))
+		table.insert(span,
+			ui.Span(name:sub(startPos[i], endPos[i])):style(state.match_style))
 		if i <= #key then
-			table.insert(span, ui.Span(key[i]):fg(state.color_label_fg):bg(state.color_label_bg))
+			table.insert(span, ui.Span(key[i]):style(state.label_style))
 		end
 		if i + 1 <= #startPos then
 			if file.is_hovered then
 				table.insert(span, ui.Span(name:sub(endPos[i] + 1, startPos[i + 1] - 1)))
 			else
-				table.insert(span, ui.Span(name:sub(endPos[i] + 1, startPos[i + 1] - 1)):fg(state.color_unmatched))
+				table.insert(span,
+					ui.Span(name:sub(endPos[i] + 1, startPos[i + 1] - 1)):style(state
+						.unmatched_style))
 			end
 		end
 		i = i + 1
@@ -337,7 +340,7 @@ local render_match_label = ya.sync(function(state, url, name, file)
 	if file.is_hovered then
 		table.insert(span, ui.Span(name:sub(endPos[i - 1] + 1, #name)))
 	else
-		table.insert(span, ui.Span(name:sub(endPos[i - 1] + 1, #name)):fg(state.color_unmatched))
+		table.insert(span, ui.Span(name:sub(endPos[i - 1] + 1, #name)):style(state.unmatched_style))
 	end
 	return span
 end)
@@ -353,7 +356,14 @@ local update_match_table = ya.sync(function(state, pane, folder, convert_pattern
 		local startPos, endPos = get_match_position(name, convert_pattern)
 		if startPos then
 			state.match[url] =
-				{ key = {}, startPos = startPos, endPos = endPos, isdir = file.cha.is_dir, pane = pane, cursorPos = i }
+			{
+				key = {},
+				startPos = startPos,
+				endPos = endPos,
+				isdir = file.cha.is_dir,
+				pane = pane,
+				cursorPos = i
+			}
 		end
 	end
 end)
@@ -401,7 +411,7 @@ local record_matches = ya.sync(function(state, patterns)
 	if cx.active.preview.folder then
 		ya.mgr_emit("peek", { force = true })
 	end
-	ya.render()
+	ui.render()
 
 	return exist_match
 end)
@@ -413,7 +423,7 @@ local toggle_flash_ui = ya.sync(function(st)
 		if cx.active.preview.folder then
 			ya.mgr_emit("peek", { force = true })
 		end
-		ya.render()
+		ui.render()
 		return
 	end
 
@@ -428,7 +438,7 @@ local toggle_flash_ui = ya.sync(function(st)
 		elseif file.is_hovered then
 			spans = { ui.Span(name) }
 		else
-			spans = { ui.Span(name):fg(st.color_unmatched) }
+			spans = { ui.Span(name):style(st.unmatched_style) }
 		end
 		return ui.Line(spans)
 	end
@@ -482,7 +492,7 @@ local process_input = ya.sync(function(state, patterns, final_input_str)
 
 	local exist_match = record_matches(patterns)
 
-	ya.render()
+	ui.render()
 	if not exist_match and (state.re_match or patterns[1] ~= "") and state.opt_auto_exit_when_unmatch then
 		return true, exist_match
 	else
@@ -495,25 +505,62 @@ local clear_flash_state = ya.sync(function(state)
 	state.next_char = nil
 	state.backouting = nil
 	state.match_pattern = nil
-	ya.render()
+	ui.render()
 end)
 
+local merge_configs = function(cfg, new_cfg)
+	add_missing = function(table, new)
+		for k, v in pairs(new) do
+			if type(v) == "table" then
+				table[k] = table[k] and type(table[k]) == "table" or {}
+				add_missing(table[k], v)
+			else
+				table[k] = v
+			end
+		end
+	end
+	add_missing(cfg, new_cfg or {})
+	return cfg
+end
+local make_style = function(style_table)
+	local style = ui.Style()
+	if style_table.fg then
+		style = style:fg(style_table.fg)
+	end
+	if style_table.bg then
+		style = style:bg(style_table.bg)
+	end
+	if style_table.bold then
+		style = style:bold()
+	end
+	if style_table.dim then
+		style = style:dim()
+	end
+	if style_table.italic then
+		style = style:italic()
+	end
+	if style_table.underline then
+		style = style:underline()
+	end
+	if style_table.blink then
+		style = style:blink()
+	end
+	if style_table.blink_rapid then
+		style = style:blink_rapid()
+	end
+	if style_table.reversed then
+		style = style:reversed()
+	end
+	if style_table.hidden then
+		style = style:hidden()
+	end
+	if style_table.crossed then
+		style = style:crossed()
+	end
+	return style
+end
+
 local set_flash_opts_default = ya.sync(function(state)
-	if state.color_unmatched == nil then
-		state.color_unmatched = "#515879"
-	end
-	if state.color_match_fg == nil then
-		state.color_match_fg = "#FFFFFF"
-	end
-	if state.color_match_bg == nil then
-		state.color_match_bg = "#3E68D7"
-	end
-	if state.color_label_fg == nil then
-		state.color_label_fg = "#FFFFFF"
-	end
-	if state.color_label_bg == nil then
-		state.color_label_bg = "#FF007C"
-	end
 	if state.opt_only_current == nil then
 		state.opt_only_current = false
 	end
@@ -537,7 +584,7 @@ local backout_last_input = ya.sync(function(state, input_str)
 	input_str = input_str:sub(1, -2)
 	state.backouting = true
 	state.match_pattern = input_str
-	ya.render()
+	ui.render()
 	return input_str, final_input_str
 end)
 
@@ -547,7 +594,7 @@ local flush_input_in_statusbar = ya.sync(function(state, input_str)
 	else
 		state.match_pattern = input_str
 	end
-	ya.render()
+	ui.render()
 end)
 
 local set_args_default = ya.sync(function(state, args)
@@ -560,21 +607,13 @@ end)
 
 return {
 	setup = function(state, opts)
-		if opts ~= nil and opts.color_unmatched ~= nil then
-			state.color_unmatched = opts.color_unmatched
-		end
-		if opts ~= nil and opts.color_match_fg ~= nil then
-			state.color_match_fg = opts.color_match_fg
-		end
-		if opts ~= nil and opts.color_match_bg ~= nil then
-			state.color_match_bg = opts.color_match_bg
-		end
-		if opts ~= nil and opts.color_label_fg ~= nil then
-			state.color_label_fg = opts.color_label_fg
-		end
-		if opts ~= nil and opts.color_label_bg ~= nil then
-			state.color_label_bg = opts.color_label_bg
-		end
+		local unmatched = merge_configs({ fg = "darkgrey" }, opts.unmatched_style)
+		local match = merge_configs({ fg = "black", bg = "blue" }, opts.match_style)
+		local label = merge_configs({ fg = "black", bg = "magenta", bold = true }, opts.label_style)
+		state.unmatched_style = make_style(unmatched)
+		state.match_style = make_style(match)
+		state.label_style = make_style(label)
+
 		if opts ~= nil and opts.only_current ~= nil then
 			state.opt_only_current = opts.only_current
 		end
