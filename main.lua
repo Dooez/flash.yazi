@@ -409,7 +409,7 @@ local record_matches = ya.sync(function(state, patterns)
 	end
 
 	if cx.active.preview.folder then
-		ya.mgr_emit("peek", { force = true })
+		ya.emit("peek", { force = true })
 	end
 	ui.render()
 
@@ -421,7 +421,7 @@ local toggle_flash_ui = ya.sync(function(st)
 		Status:children_remove(st.status_flash_id)
 		Entity.highlights, st.highlights, st.status_flash_id = st.highlights, nil, nil
 		if cx.active.preview.folder then
-			ya.mgr_emit("peek", { force = true })
+			ya.emit("peek", { force = true })
 		end
 		ui.render()
 		return
@@ -451,7 +451,7 @@ local toggle_flash_ui = ya.sync(function(st)
 	st.status_flash_id = Status:children_add(status_flash, 1001, Status.LEFT)
 
 	if cx.active.preview.folder then
-		ya.mgr_emit("peek", { force = true })
+		ya.emit("peek", { force = true })
 	end
 end)
 
@@ -478,11 +478,11 @@ local process_input = ya.sync(function(state, patterns, final_input_str)
 	if url then
 		if not state.args_autocd and state.match[url].pane == "current" then
 			local folder = cx.active.current
-			ya.mgr_emit("arrow", { state.match[url].cursorPos - folder.cursor - 1 + folder.offset })
+			ya.emit("arrow", { state.match[url].cursorPos - folder.cursor - 1 + folder.offset })
 		elseif state.args_autocd and state.match[url].isdir then
-			ya.mgr_emit("cd", { url })
+			ya.emit("cd", { url })
 		else
-			ya.mgr_emit("reveal", { url })
+			ya.emit("reveal", { url })
 		end
 		return true, true
 	end
